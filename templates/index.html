@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>დანიშნულების ავტომატიზაცია</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f4f6f9; padding: 20px; }
+    h1 { color: #0d1b42; margin-bottom: 20px; font-size: 22px; }
+    h2 { color: #0d1b42; font-size: 16px; margin-bottom: 12px; }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    }
+
+    label { display: block; font-size: 13px; color: #444; margin-bottom: 4px; margin-top: 12px; }
+    input, textarea, select {
+      width: 100%; padding: 8px 10px; border: 1px solid #ccd; border-radius: 4px;
+      font-size: 14px;
+    }
+    textarea { resize: vertical; min-height: 60px; }
+
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+
+    /* Medication block */
+    .med-block {
+      border: 1px solid #dde;
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 12px;
+      position: relative;
+      background: #fafbff;
+    }
+    .med-block h3 { font-size: 14px; color: #0d1b42; margin-bottom: 6px; }
+    .remove-med {
+      position: absolute; top: 10px; right: 10px;
+      background: #e05; color: #fff; border: none;
+      border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 12px;
+    }
+
+    button.primary {
+      background: #0d1b42; color: #fff; border: none;
+      padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;
+    }
+    button.primary:hover { background: #162554; }
+    button.secondary {
+      background: #fff; color: #0d1b42; border: 1px solid #0d1b42;
+      padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;
+    }
+    button.secondary:hover { background: #f0f2f8; }
+
+    /* Progress */
+    #progress-section { display: none; }
+    .progress-bar-wrap {
+      background: #e0e3ee; border-radius: 10px; height: 20px; overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-bar-fill {
+      height: 100%; background: #0d1b42; transition: width .3s;
+      border-radius: 10px;
+    }
+
+    /* Result */
+    #result-section { display: none; }
+    .result-number {
+      font-size: 28px; font-weight: bold; color: #0d1b42;
+      letter-spacing: 2px; margin: 10px 0;
+    }
+    .error-msg { color: #c00; font-size: 14px; margin-top: 8px; }
+    .success-msg { color: #060; font-size: 14px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<h1>დანიშნულების ნომრის ავტომატიზაცია</h1>
+
+<!-- Patient info -->
+<div class="card">
+  <h2>პაციენტის მონაცემები</h2>
+  <div class="row">
+    <div>
+      <label>პირადი ნომერი (11 ციფრი)</label>
+      <input id="patient_pn" type="text" maxlength="11" placeholder="01234567890">
+    </div>
+    <div>
+      <label>დაბადების წელი</label>
+      <input id="birth_year" type="text" maxlength="4" placeholder="1985">
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label>მობილური (9 ციფრი, 5-ით დაწყება) — სურვილისამებრ</label>
+      <input id="phone" type="text" maxlength="9" placeholder="555123456">
+    </div>
+    <div>
+      <label>ელ-ფოსტა — სურვილისამებრ</label>
+      <input id="email" type="email" placeholder="patient@example.com">
+    </div>
+  </div>
+</div>
+
+<!-- Medications -->
+<div class="card">
+  <h2>მედიკამენტები</h2>
+  <div id="meds-container"></div>
+  <button class="secondary" onclick="addMed()">+ მედიკამენტის დამატება</button>
+</div>
+
+<!-- Submit -->
+<div class="card">
+  <button class="primary" onclick="submitJob()">დანიშნულების გამოწერა</button>
+</div>
+
+<!-- Progress -->
+<div class="card" id="progress-section">
+  <h2>მიმდინარეობს...</h2>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+  <div id="progress-label" style="font-size:13px;color:#555;">0%</div>
+</div>
+
+<!-- Result -->
+<div class="card" id="result-section">
+  <h2>შედეგი</h2>
+  <div id="result-body"></div>
+</div>
+
+<script>
+let medCount = 0;
+
+function addMed() {
+  const idx = medCount++;
+  const html = `
+    <div class="med-block" id="med-${idx}">
+      <h3>მედიკამენტი #${idx + 1}</h3>
+      <button class="remove-med" onclick="removeMed(${idx})">წაშლა</button>
+      <label>მოძიების სიტყვა (სავაჭრო ან გენერიკული დასახელება)</label>
+      <input type="text" id="search_term_${idx}" placeholder="მაგ: Aspirin">
+      <div class="row">
+        <div>
+          <label>რაოდენობა (ერთეული)</label>
+          <input type="number" id="quantity_${idx}" min="1" max="500" value="1">
+        </div>
+        <div>
+          <label>ვადა (დღეებში)</label>
+          <input type="number" id="duration_days_${idx}" min="1" value="30">
+        </div>
+      </div>
+      <label>მიღების წესი (DS)</label>
+      <textarea id="instructions_${idx}" placeholder="მაგ: 1 ტაბლეტი დღეში ერთხელ ჭამის შემდეგ"></textarea>
+      <div class="row" style="margin-top:8px">
+        <div>
+          <label>გამოწერის ფორმა</label>
+          <select id="recipe_type_${idx}">
+            <option value="მხოლოდ გენერიკი">მხოლოდ გენერიკი</option>
+            <option value="მხოლოდ სავაჭრო">მხოლოდ სავაჭრო</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:4px;">
+          <label style="display:flex;align-items:center;gap:6px;margin-top:0;">
+            <input type="checkbox" id="subst_${idx}" checked>
+            შესაძლებელია ჩანაცვლება
+          </label>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById("meds-container").insertAdjacentHTML("beforeend", html);
+}
+
+function removeMed(idx) {
+  const el = document.getElementById(`med-${idx}`);
+  if (el) el.remove();
+}
+
+function collectMeds() {
+  const blocks = document.querySelectorAll(".med-block");
+  const meds = [];
+  for (const b of blocks) {
+    const idx = b.id.replace("med-", "");
+    meds.push({
+      search_term:          document.getElementById(`search_term_${idx}`).value.trim(),
+      quantity:             parseInt(document.getElementById(`quantity_${idx}`).value),
+      duration_days:        parseInt(document.getElementById(`duration_days_${idx}`).value),
+      instructions:         document.getElementById(`instructions_${idx}`).value.trim(),
+      recipe_type:          document.getElementById(`recipe_type_${idx}`).value,
+      substitution_allowed: document.getElementById(`subst_${idx}`).checked,
+    });
+  }
+  return meds;
+}
+
+function showProgress(pct) {
+  document.getElementById("progress-section").style.display = "block";
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-label").textContent = pct + "%";
+}
+
+function showResult(data) {
+  document.getElementById("result-section").style.display = "block";
+  const body = document.getElementById("result-body");
+  if (data.status === "done") {
+    body.innerHTML = `
+      <div class="success-msg">დანიშნულება წარმატებით გამოიწერა!</div>
+      <div class="result-number">${data.prescription_number || "—"}</div>`;
+  } else {
+    body.innerHTML = `<div class="error-msg">შეცდომა: ${data.error || "უცნობი"}</div>`;
+  }
+}
+
+async function submitJob() {
+  const pn = document.getElementById("patient_pn").value.trim();
+  const year = document.getElementById("birth_year").value.trim();
+  if (pn.length !== 11) { alert("პირადი ნომერი უნდა იყოს 11 ციფრი"); return; }
+  if (year.length !== 4) { alert("შეიყვანეთ დაბადების წელი (4 ციფრი)"); return; }
+
+  const meds = collectMeds();
+  if (!meds.length) { alert("დაამატეთ მინიმუმ ერთი მედიკამენტი"); return; }
+  for (const m of meds) {
+    if (!m.search_term) { alert("შეიყვანეთ მედიკამენტის დასახელება"); return; }
+  }
+
+  const payload = {
+    patient_pn: pn,
+    birth_year: year,
+    phone: document.getElementById("phone").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    medications: meds,
+  };
+
+  document.getElementById("result-section").style.display = "none";
+  showProgress(0);
+
+  const resp = await fetch("/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const { job_id } = await resp.json();
+
+  // Poll status
+  const interval = setInterval(async () => {
+    const r = await fetch(`/status/${job_id}`);
+    const d = await r.json();
+    showProgress(d.progress || 0);
+    if (d.status === "done" || d.status === "error") {
+      clearInterval(interval);
+      showProgress(100);
+      showResult(d);
+    }
+  }, 1000);
+}
+
+// Add one empty medication block on load
+addMed();
+</script>
+</body>
+</html>

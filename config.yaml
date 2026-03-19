@@ -1,0 +1,40 @@
+site:
+  base_url: "https://eprescription.moh.gov.ge"
+
+timeouts:
+  ajax_wait: 10
+  modal_wait: 20
+
+selectors:
+  # ── Patient search bar ────────────────────────────────────────────────
+  patient_pn:         "#prescription_pn"
+  patient_birth_year: "#PatientBirthYear"
+  patient_name:       "#prescription_name"
+  search_button:      "#prescription_search_button"
+
+  # ── Add prescription button ───────────────────────────────────────────
+  add_prescription_btn: "button[onclick='set_prescription_type()']"
+
+  # ── Modal 1  (patient contact details) ───────────────────────────────
+  modal1_phone:    "#new_prescription_tel"
+  modal1_email:    "#new_prescription_mail"
+  modal1_no_phone: "#havenotphone"
+  modal1_next:     "#new_prescription_next"
+
+  # ── Modal 2  (medication list) ────────────────────────────────────────
+  modal2_add_med: "button[onclick='new_prescription_add_rec_check()']"
+  modal2_submit:  "#create_prescription_btn"
+
+  # ── Medication search modal ───────────────────────────────────────────
+  meds_search:     "#new_prescription_med_table_inner_filter input[type='search']"
+  meds_search_btn: "button[onclick='new_prescription_meds_search()']"
+  meds_first_row:  "#new_prescription_med_table_inner tbody tr:first-child"
+  meds_confirm:    "#approveMedButton"
+
+  # ── Medication form modal ─────────────────────────────────────────────
+  med_quantity:      "#new_prescription_quantity"
+  med_duration_days: "#new_prescription_duration_days"
+  med_ds:            "#new_prescription_DS"
+  med_recipe_type:   "#new_prescription_recipe_type"
+  med_doze:          "#new_prescription_doze"
+  med_confirm:       "button[onclick='new_prescription_add_med()']"
