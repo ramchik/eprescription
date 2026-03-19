@@ -1,0 +1,36 @@
+# eprescription.moh.gov.ge automation configuration
+# Update these selectors after inspecting the website with browser DevTools
+
+site:
+  base_url: "https://eprescription.moh.gov.ge"
+  login_url: "https://eprescription.moh.gov.ge/login"
+  prescription_url: "https://eprescription.moh.gov.ge/prescriptions/new"
+
+# CSS selectors for the login form
+# Open DevTools (F12) → Elements tab and find the actual field names/IDs
+login:
+  username_selector: "input[name='username']"
+  password_selector: "input[name='password']"
+  submit_selector: "button[type='submit']"
+
+# CSS selectors for the prescription creation form
+# Inspect the form on the site and fill in the correct selectors
+prescription_form:
+  # Patient ID / personal number field
+  patient_id_selector: "input[name='patient_id']"
+  # Medication/drug name field (search box or input)
+  drug_name_selector: "input[name='drug_name']"
+  # Dosage field
+  dosage_selector: "input[name='dosage']"
+  # Instructions / directions field
+  instructions_selector: "textarea[name='instructions']"
+  # Submit button for the prescription form
+  submit_selector: "button[type='submit']"
+  # Selector for the receipt number shown after submission
+  receipt_number_selector: ".receipt-number"
+
+# Timing settings (milliseconds)
+timing:
+  page_load_timeout: 30000
+  element_timeout: 10000
+  between_prescriptions_delay: 2000

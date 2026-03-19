@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ePrescription ავტომატიზაცია</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #2b6cb0;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      color: #4a5568;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      border-color: #4299e1;
+    }
+
+    textarea {
+      height: 200px;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .row > div { flex: 1; min-width: 200px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn-primary { background: #3182ce; color: #fff; }
+    .btn-primary:hover { background: #2b6cb0; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover { background: #cbd5e0; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Parsed preview */
+    .med-list { list-style: none; }
+    .med-item {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #edf2f7;
+    }
+    .med-item:last-child { border-bottom: none; }
+    .med-num {
+      min-width: 24px;
+      font-weight: 700;
+      color: #3182ce;
+    }
+    .med-name { font-weight: 600; }
+    .med-detail { font-size: 0.85rem; color: #718096; }
+
+    /* Results */
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #edf2f7;
+    }
+    .result-item:last-child { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .badge-success { background: #c6f6d5; color: #276749; }
+    .badge-error   { background: #fed7d7; color: #9b2c2c; }
+    .badge-pending { background: #bee3f8; color: #2a4365; }
+
+    .receipt {
+      font-family: monospace;
+      font-size: 0.9rem;
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+
+    .progress-bar-wrap {
+      background: #edf2f7;
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #3182ce;
+      transition: width 0.4s;
+      border-radius: 999px;
+    }
+
+    .hidden { display: none; }
+
+    .error-msg {
+      color: #c53030;
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+    }
+
+    .headless-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: #4a5568;
+    }
+    .headless-row input { width: auto; }
+  </style>
+</head>
+<body>
+  <h1>ePrescription ავტომატიზაცია</h1>
+  <p class="subtitle">ჩასვით დანიშნულება, შეიყვანეთ პაციენტის ID — პროგრამა თავად შეავსებს ყველა ცალ-ცალკე.</p>
+
+  <!-- Step 1: Input -->
+  <div class="card" id="step-input">
+    <div class="row">
+      <div>
+        <label for="patient-id">პაციენტის პირადი ნომერი</label>
+        <input type="text" id="patient-id" placeholder="01234567890" />
+      </div>
+    </div>
+
+    <label for="prescription-text">დანიშნულების ტექსტი</label>
+    <textarea id="prescription-text" placeholder="1. კარდიომაგნილი - 75 მგ. 1-ტაბ, 1-ჯერ დღეში...&#10;2. ლიპრიმარი - 40 მგ. ..."></textarea>
+
+    <br />
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="parseText()">გაანალიზება (Preview)</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Preview -->
+  <div class="card hidden" id="step-preview">
+    <h3 style="margin-bottom:12px;">პრეპარატები ({{ count }})</h3>
+    <ul class="med-list" id="med-list"></ul>
+    <br />
+    <div class="headless-row">
+      <input type="checkbox" id="show-browser" />
+      <label for="show-browser" style="margin:0;">ბრაუზერი გამოჩნდეს (რეკომენდებულია პირველად)</label>
+    </div>
+    <br />
+    <div class="btn-group">
+      <button class="btn btn-primary" id="submit-btn" onclick="submitPrescriptions()">რეცეპტების შექმნა ▶</button>
+      <button class="btn btn-secondary" onclick="resetForm()">← უკან</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Progress + Results -->
+  <div class="card hidden" id="step-results">
+    <h3 style="margin-bottom:10px;">შედეგები</h3>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+    </div>
+    <p id="progress-text" style="font-size:0.85rem; color:#718096; margin-bottom:14px;"></p>
+    <div id="error-box" class="error-msg hidden"></div>
+    <div id="result-list"></div>
+    <br />
+    <button class="btn btn-secondary hidden" id="done-btn" onclick="resetForm()">ახალი დანიშნულება</button>
+  </div>
+
+  <script>
+    let parsedMeds = [];
+    let pollInterval = null;
+
+    function parseText() {
+      const text = document.getElementById("prescription-text").value.trim();
+      if (!text) { alert("შეიყვანეთ დანიშნულება"); return; }
+
+      fetch("/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert("შეცდომა: " + data.error); return; }
+
+        parsedMeds = data.medications;
+        const list = document.getElementById("med-list");
+        list.innerHTML = "";
+        parsedMeds.forEach(m => {
+          const li = document.createElement("li");
+          li.className = "med-item";
+          li.innerHTML = `
+            <span class="med-num">${m.number}.</span>
+            <div>
+              <span class="med-name">${m.name}</span>
+              <span class="med-detail"> — ${m.dosage}</span>
+              <div class="med-detail" style="margin-top:2px;">${m.instructions}</div>
+            </div>`;
+          list.appendChild(li);
+        });
+
+        document.getElementById("step-input").classList.add("hidden");
+        document.getElementById("step-preview").classList.remove("hidden");
+      })
+      .catch(err => alert("სერვერის შეცდომა: " + err));
+    }
+
+    function submitPrescriptions() {
+      const patientId = document.getElementById("patient-id").value.trim();
+      if (!patientId) { alert("შეიყვანეთ პაციენტის პირადი ნომერი"); return; }
+
+      const text = document.getElementById("prescription-text").value.trim();
+      const showBrowser = document.getElementById("show-browser").checked;
+
+      document.getElementById("submit-btn").disabled = true;
+
+      fetch("/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, patient_id: patientId, headless: !showBrowser })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert("შეცდომა: " + data.error); return; }
+
+        document.getElementById("step-preview").classList.add("hidden");
+        document.getElementById("step-results").classList.remove("hidden");
+
+        pollStatus(data.job_id, data.total);
+      })
+      .catch(err => alert("სერვერის შეცდომა: " + err));
+    }
+
+    function pollStatus(jobId, total) {
+      const progressBar = document.getElementById("progress-bar");
+      const progressText = document.getElementById("progress-text");
+      const resultList = document.getElementById("result-list");
+      const errorBox = document.getElementById("error-box");
+      let lastCompleted = 0;
+
+      pollInterval = setInterval(() => {
+        fetch("/status/" + jobId)
+          .then(r => r.json())
+          .then(job => {
+            const pct = Math.round((job.completed / total) * 100);
+            progressBar.style.width = pct + "%";
+            progressText.textContent = `${job.completed} / ${total} პრეპარატი დამუშავებულია`;
+
+            // Append newly completed results
+            const newResults = job.results.slice(lastCompleted);
+            newResults.forEach(r => {
+              const el = document.createElement("div");
+              el.className = "result-item";
+              const badge = r.success
+                ? `<span class="badge badge-success">✓</span>`
+                : `<span class="badge badge-error">✗</span>`;
+              const receipt = r.receipt_number
+                ? `<span class="receipt">${r.receipt_number}</span>`
+                : `<span style="color:#c53030;font-size:0.85rem;">${r.error || "ვერ მოიძებნა"}</span>`;
+              el.innerHTML = `
+                ${badge}
+                <span><b>${r.number}. ${r.name}</b> <span style="color:#718096;">${r.dosage}</span></span>
+                ${receipt}`;
+              resultList.appendChild(el);
+            });
+            lastCompleted = job.results.length;
+
+            if (job.status === "done" || job.status === "error") {
+              clearInterval(pollInterval);
+              document.getElementById("done-btn").classList.remove("hidden");
+
+              if (job.status === "error") {
+                errorBox.textContent = "შეცდომა: " + job.error;
+                errorBox.classList.remove("hidden");
+              }
+            }
+          });
+      }, 1500);
+    }
+
+    function resetForm() {
+      if (pollInterval) clearInterval(pollInterval);
+      document.getElementById("step-input").classList.remove("hidden");
+      document.getElementById("step-preview").classList.add("hidden");
+      document.getElementById("step-results").classList.add("hidden");
+      document.getElementById("submit-btn").disabled = false;
+      document.getElementById("result-list").innerHTML = "";
+      document.getElementById("error-box").classList.add("hidden");
+      document.getElementById("done-btn").classList.add("hidden");
+      document.getElementById("progress-bar").style.width = "0%";
+    }
+  </script>
+</body>
+</html>
